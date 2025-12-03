@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -20,20 +19,13 @@ var rawInput string
 var batterysPerBank = 0
 
 type BatteryBank struct {
-	CellVoltate         []int
+	CellVoltate         []string
 	CellIndexesToTurnOn []int
 }
 
 func NewBatteryBank(s string) (b BatteryBank, err error) {
-	digits := make([]int, len(s))
-	for i, ch := range strings.Split(s, "") {
-		digits[i], err = strconv.Atoi(ch)
-		if err != nil {
-			return b, fmt.Errorf("could not convert %s: %s", ch, err.Error())
-		}
-	}
 	return BatteryBank{
-		CellVoltate: digits,
+		CellVoltate: strings.Split(s, ""),
 	}, nil
 }
 
@@ -42,10 +34,10 @@ func (b BatteryBank) String() string {
 	for i, d := range b.CellVoltate {
 		if slices.Contains(b.CellIndexesToTurnOn, i) {
 			builder.WriteString(CONSOLE_RED)
-			builder.WriteRune(rune('0') + rune(d))
+			builder.WriteString(d)
 			builder.WriteString(CONSOLE_RESET)
 		} else {
-			builder.WriteRune(rune('0') + rune(d))
+			builder.WriteString(d)
 		}
 	}
 	return builder.String()
@@ -60,7 +52,7 @@ func (b *BatteryBank) GetMaxJoltage(cellCount int) (int, error) {
 
 	sum := 0
 	for _, i := range b.CellIndexesToTurnOn {
-		sum = sum*10 + b.CellVoltate[i]
+		sum = sum*10 + int(b.CellVoltate[i][0]-'0')
 	}
 	return sum, nil
 }
@@ -85,6 +77,11 @@ func (b *BatteryBank) computeMaxJoltage(cellCount int) error {
 		// Start indexing the starting from the higest remaining index
 		offset := max(0, (i+cellCount)-batterysPerBank)
 
+		// if we found a new 9, update the start index
+		if b.CellVoltate[ninesFound] == "9" {
+			ninesFound++
+		}
+
 		// starting at the highest index, check if the current cell volate is higer than the sorted one
 		for j := ninesFound; j+offset < cellCount; j++ {
 			if b.CellVoltate[i+j] > b.CellVoltate[b.CellIndexesToTurnOn[j+offset]] {
@@ -95,11 +92,6 @@ func (b *BatteryBank) computeMaxJoltage(cellCount int) error {
 
 				break
 			}
-		}
-
-		// if we found a new 9, update the start index
-		if b.CellVoltate[ninesFound] == 9 {
-			ninesFound++
 		}
 	}
 	return nil
